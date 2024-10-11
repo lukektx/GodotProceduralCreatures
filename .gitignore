@@ -1,0 +1,4 @@
+godot-cpp
+.vscode
+.sconsign.dblite
+*.obj

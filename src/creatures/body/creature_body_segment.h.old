@@ -1,0 +1,34 @@
+#ifndef CREATURE_BODY_SEGMENT_H
+#define CREATURE_BODY_SEGMENT_H
+
+#include <godot_cpp/classes/circle_shape2d.hpp>
+#include <godot_cpp/classes/collision_shape2d.hpp>
+#include <godot_cpp/variant/utility_functions.hpp>
+
+#define DEFAULT_SEGMENT_RADIUS 20
+
+namespace godot {
+class CreatureBodySegment : public CollisionShape2D {
+  GDCLASS(CreatureBodySegment, CollisionShape2D);
+
+ private:
+  CreatureBodySegment *next = nullptr;
+  float radius = DEFAULT_SEGMENT_RADIUS;
+
+ protected:
+  static void _bind_methods();
+  void initialize_shape();
+
+ public:
+  CreatureBodySegment();
+  CreatureBodySegment(float p_radius);
+  ~CreatureBodySegment();
+
+  void set_next(CreatureBodySegment *p_next);
+  CreatureBodySegment *get_next();
+  void set_radius(float p_radius);
+  float get_radius();
+};
+}  // namespace godot
+
+#endif

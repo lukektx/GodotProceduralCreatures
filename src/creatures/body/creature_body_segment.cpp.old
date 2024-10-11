@@ -1,0 +1,43 @@
+#include "creature_body_segment.h"
+
+using namespace godot;
+
+void CreatureBodySegment::_bind_methods() {
+  ClassDB::bind_method(D_METHOD("get_radius"),
+                       &CreatureBodySegment::get_radius);
+  ClassDB::bind_method(D_METHOD("set_radius", "p_radius"),
+                       &CreatureBodySegment::set_radius);
+  ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "radius"), "set_radius",
+               "get_radius");
+
+  ClassDB::bind_method(D_METHOD("get_next"), &CreatureBodySegment::get_next);
+  ClassDB::bind_method(D_METHOD("set_next", "p_next"),
+                       &CreatureBodySegment::set_next);
+}
+
+CreatureBodySegment::CreatureBodySegment() {
+  UtilityFunctions::print("initialized");
+  initialize_shape();
+}
+CreatureBodySegment::CreatureBodySegment(float p_radius) {
+  radius = p_radius;
+  initialize_shape();
+}
+CreatureBodySegment::~CreatureBodySegment() {}
+
+void CreatureBodySegment::initialize_shape() {
+  CircleShape2D *shape = memnew(CircleShape2D());
+  shape->set_radius(radius);
+  set_shape(shape);
+}
+
+void CreatureBodySegment::set_next(CreatureBodySegment *p_next) {
+  next = p_next;
+}
+CreatureBodySegment *CreatureBodySegment::get_next() { return next; }
+float CreatureBodySegment::get_radius() {
+  return static_cast<CircleShape2D *>(get_shape().ptr())->get_radius();
+}
+void CreatureBodySegment::set_radius(float p_radius) {
+  static_cast<CircleShape2D *>(get_shape().ptr())->set_radius(p_radius);
+}
