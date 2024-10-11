@@ -2,8 +2,8 @@
 #define BODYCREATURE_BODY_H_H
 
 #define BAKE_INTERVAL 20
-#define MAX_ANGLE Math_PI / 8
 #define ALMOST_ZERO 0.00001
+#define ANGLE_COEFFICIENT 0.2
 
 #include <godot_cpp/classes/character_body2d.hpp>
 #include <godot_cpp/classes/collision_polygon2d.hpp>
@@ -17,8 +17,7 @@ class CreatureBody : public CharacterBody2D {
   GDCLASS(CreatureBody, CharacterBody2D);
 
  private:
-  CreatureBodySegment *head = nullptr;
-  CreatureBodySegment *tail = nullptr;
+  std::vector<CreatureBodySegment *> segments;
   CollisionPolygon2D *collision_polygon;
   Line2D *outline;
 
@@ -26,7 +25,7 @@ class CreatureBody : public CharacterBody2D {
 
  protected:
   static void _bind_methods();
-  static Vector2 angle_constraint(Vector2 dir1, Vector2 dir2);
+  static float angle_constraint(float angle1, float angle2, float max_angle);
   void cleanup_segments();
   void update_shape();
 

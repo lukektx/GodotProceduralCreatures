@@ -23,114 +23,118 @@ CreatureBody::CreatureBody() {
   add_child(collision_polygon);
   outline = memnew(Line2D);
   add_child(outline);
+  std::vector<CreatureBodySegment *> new_segments();
+  segments = new_segments;
+  UtilityFunctions::print("Init segments", segments);
   initialize_segments(DEFAULT_SEGMENT_RADIUS, length);
 }
 CreatureBody::~CreatureBody() { cleanup_segments(); }
 
 void CreatureBody::move_towards(Vector2 head_pos, float speed) {
-  CreatureBodySegment *current_segment = head;
+  // CreatureBodySegment *current_segment = head;
+  // CreatureBodySegment *prev_segment = nullptr;
+  // CreatureBodySegment *prev_prev_segment = nullptr;
+
+  // Vector2 current_pos;
+  // Vector2 prev_pos;
+
+  // while (current_segment) {
+  //   current_pos = current_segment->get_pos();
+  //   if (current_segment == head) {
+  //     current_segment->set_direction((head_pos - current_pos).normalized());
+  //   } else {
+  //     // Apply angle constraint here
+
+  //     Vector2 prev_dir = prev_segment->get_direction();
+  //     Vector2 current_dir = current_segment->get_direction();
+  //     prev_segment->set_direction(angle_constraint(prev_dir, current_dir));
+
+  //     if (prev_prev_segment) {
+  //       Vector2 pos_change =
+  //           prev_segment->get_direction() * prev_prev_segment->get_radius();
+  //       prev_segment->set_pos(prev_prev_segment->get_pos() - pos_change);
+  //       prev_pos = prev_segment->get_pos();
+  //     } else if (prev_segment == head) {
+  //       prev_segment->set_pos(prev_pos + prev_segment->get_direction() *
+  //       speed); prev_pos = prev_segment->get_pos();
+  //       current_segment->set_direction((prev_pos -
+  //       current_pos).normalized());
+  //     }
+  //     current_segment->set_direction((prev_pos - current_pos).normalized());
+
+  //     if (current_segment == tail && current_segment != head) {
+  //       Vector2 pos_change =
+  //           current_segment->get_direction() * prev_segment->get_radius();
+  //       current_segment->set_pos(prev_pos - pos_change);
+  //     }
+  //   }
+
+  //   prev_prev_segment = prev_segment;
+  //   prev_segment = current_segment;
+  //   prev_pos = prev_segment->get_pos();
+  //   current_segment = current_segment->get_next();
+  // }
   CreatureBodySegment *prev_segment = nullptr;
-  CreatureBodySegment *prev_prev_segment = nullptr;
+  for (CreatureBodySegment *segment : *segments) {
+    Vector2 current_pos = segment->get_pos();
+    if (!prev_segment) {
+      float max_angle = segment->get_max_angle();
+      float angle = (head_pos - current_pos).angle();
+      angle = CLAMP(angle, -max_angle, max_angle) * ANGLE_COEFFICIENT;
 
-  Vector2 current_pos;
-  Vector2 prev_pos;
+      // make sure angle is 2pi to -2pi
+      segment->set_angle(angle);
+      segment->set_pos(segment->get_pos() + Vector2::from_angle(angle) * speed);
 
-  while (current_segment) {
-    current_pos = current_segment->get_pos();
-    if (current_segment == head) {
-      current_segment->set_direction((head_pos - current_pos).normalized());
     } else {
-      // Apply angle constraint here
+      Vector2 prev_pos = prev_segment->get_pos();
+      float angle = (prev_pos - current_pos).angle();
+      angle = angle_constraint(angle, prev_segment->get_angle(),
+                               segment->get_max_angle());
 
-      Vector2 prev_dir = prev_segment->get_direction();
-      Vector2 current_dir = current_segment->get_direction();
-      prev_segment->set_direction(angle_constraint(prev_dir, current_dir));
-
-      if (prev_prev_segment) {
-        Vector2 pos_change =
-            prev_segment->get_direction() * prev_prev_segment->get_radius();
-        prev_segment->set_pos(prev_prev_segment->get_pos() - pos_change);
-        prev_pos = prev_segment->get_pos();
-      } else if (prev_segment == head) {
-        prev_segment->set_pos(prev_pos + prev_segment->get_direction() * speed);
-        prev_pos = prev_segment->get_pos();
-        current_segment->set_direction((prev_pos - current_pos).normalized());
-      }
-      current_segment->set_direction((prev_pos - current_pos).normalized());
-
-      if (current_segment == tail && current_segment != head) {
-        Vector2 pos_change =
-            current_segment->get_direction() * prev_segment->get_radius();
-        current_segment->set_pos(prev_pos - pos_change);
-      }
+      segment->set_angle(angle);
+      segment->set_pos(prev_pos -
+                       Vector2::from_angle(angle) * prev_segment->get_radius());
     }
-
-    prev_prev_segment = prev_segment;
-    prev_segment = current_segment;
-    prev_pos = prev_segment->get_pos();
-    current_segment = current_segment->get_next();
   }
 
   queue_redraw();
   update_shape();
 }
 
-// Changes dir1 if not within angle constraint
-Vector2 CreatureBody::angle_constraint(Vector2 dir1, Vector2 dir2) {
-  double angle = dir2.angle_to(dir1);
-  if (abs(angle) > MAX_ANGLE) {
-    double rotation = angle > 0 ? MAX_ANGLE : -MAX_ANGLE;
-    return dir2.rotated(rotation);
+// returns new value for angle1 if not within angle constraint
+float CreatureBody::angle_constraint(float angle1, float angle2,
+                                     float max_angle) {
+  double angle_diff = angle2 - angle1;
+  if (abs(angle_diff) > max_angle) {
+    double rotation = angle_diff > 0 ? max_angle : -max_angle;
+    return angle2 + rotation;
   }
-  return dir1;
-}
-
-void CreatureBody::add_segment(float radius) {
-  CreatureBodySegment *new_segment = new CreatureBodySegment(radius);
-  length++;
-  if (tail) {
-    tail->set_next(new_segment);
-    new_segment->set_prev(tail);
-    tail = new_segment;
-  } else {
-    head = new_segment;
-    tail = new_segment;
-  }
+  return angle1;
 }
 
 void CreatureBody::initialize_segments(float radius, int length) {
   cleanup_segments();
+  segments = new std::vector<CreatureBodySegment *>;
   for (int i = 0; i < length; i++) {
-    add_segment(radius);
-    CreatureBodySegment *prev = tail->get_prev();
-    if (prev) {
-      UtilityFunctions::print(
-          "initialized to ",
-          prev->get_pos() + Vector2(1, 0) * prev->get_radius());
-      tail->set_pos(prev->get_pos() + Vector2(1, 0) * prev->get_radius());
-    }
+    segments->push_back(memnew(CreatureBodySegment(radius)));
   }
 }
 
 void CreatureBody::initialize_segments(Array radii) {
   cleanup_segments();
-  for (int i = 0; i < radii.size(); i++) {
-    add_segment(radii[i]);
-    CreatureBodySegment *prev = tail->get_prev();
-    if (prev) {
-      tail->set_pos(prev->get_pos() + Vector2(1, 0) * prev->get_radius());
-    }
+  segments = new std::vector<CreatureBodySegment *>;
+  for (int i = 0; i < length; i++) {
+    segments->push_back(memnew(CreatureBodySegment(radii[i])));
   }
 }
 
 void CreatureBody::cleanup_segments() {
-  CreatureBodySegment *current_segment = head;
-
-  while (current_segment) {
-    CreatureBodySegment *next_segment = current_segment->get_next();
-    delete (current_segment);
-    current_segment = next_segment;
+  UtilityFunctions::print("Segments", segments);
+  for (CreatureBodySegment *segment : *segments) {
+    delete segment;
   }
+  delete &segments;
 }
 
 void CreatureBody::update_shape() {
@@ -138,28 +142,19 @@ void CreatureBody::update_shape() {
   // 1 point on each side, one front and 1 back then copy of front
   all_points.resize(2 * length + 3);
   static int last_index = all_points.size() - 1;
-  CreatureBodySegment *current_segment = head;
-  CreatureBodySegment *prev_segment = nullptr;
-  int segment_index = 0;
+  for (int i = 0; i < segments->size(); i++) {
+    if (i == 0) {
+      Vector2 head_point = segments->at(i)->get_head_point();
+      all_points[i] = head_point;
+      all_points[last_index - i] = head_point;
+    } else if (i == segments->size() - 1) {
+      all_points[segments->size() / 2] = segments->at(i)->get_tail_point();
+    }
 
-  // add head points
-  if (head) {
-    Vector2 head_point = head->get_head_point();
-    all_points[segment_index] = head_point;
-    all_points[last_index - segment_index] = head_point;
-    segment_index++;
+    PackedVector2Array sides = segments->at(i)->get_side_points();
+    all_points[i + 1] = sides[0];
+    all_points[last_index - i - 1] = sides[1];
   }
-  // add all side body points
-  while (current_segment) {
-    PackedVector2Array sides = current_segment->get_side_points();
-    all_points[segment_index] = sides[0];
-    all_points[last_index - segment_index] = sides[1];
-    prev_segment = current_segment;
-    current_segment = current_segment->get_next();
-    segment_index++;
-  }
-  // add tail point
-  all_points[segment_index] = prev_segment->get_tail_point();
 
   collision_polygon->set_polygon(all_points);
   Curve2D *outline_curve = memnew(Curve2D);
@@ -167,12 +162,8 @@ void CreatureBody::update_shape() {
     outline_curve->add_point(all_points[i]);
   }
   outline->set_points(outline_curve->tessellate());
+  // memdelete(outline_curve);
 }
-
-CreatureBody::iterator CreatureBody::begin() { return head; }
-CreatureBody::const_iterator CreatureBody::begin() const { return head; }
-CreatureBody::iterator CreatureBody::end() { return tail; }
-CreatureBody::const_iterator CreatureBody::end() const { return tail; }
 
 int CreatureBody::get_length() { return length; }
 void CreatureBody::set_length(int p_length) { length = p_length; }
@@ -182,13 +173,10 @@ void CreatureBody::_ready() {
 }
 
 void CreatureBody::_draw() {
-  CreatureBodySegment *current_segment = head;
-  while (current_segment) {
-    Vector2 pos = current_segment->get_pos();
-    // draw_circle(pos, current_segment->get_radius(), Color(0, 0, 1, 1), false,
-    //             5);
-    // // draw_line(pos, pos + current_segment->get_direction() * 10,
-    // Color(1, 0, 0, 1), 5);
-    current_segment = current_segment->get_next();
+  for (CreatureBodySegment *segment : *segments) {
+    Vector2 pos = segment->get_pos();
+    draw_circle(pos, segment->get_radius(), Color(0, 0, 1, 1), false, 5);
+    Vector2 dir = Vector2::from_angle(segment->get_angle()) * 30;
+    draw_line(pos, pos + dir, Color(1, 0, 0, 1), 5);
   }
 }
